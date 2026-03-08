@@ -1,0 +1,13 @@
+torch
+torch-geometric
+pandas
+google-cloud-bigquery
+google-cloud-storage
+db-dtypes
+pyarrow
+scikit-learn
+cloudml-hypertune
+PyYAML
+webdataset
+numpy==1.26.4
+re

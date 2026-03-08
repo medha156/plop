@@ -1,0 +1,44 @@
+studySpec:
+  metrics:
+  - metricId: val_loss
+    goal: MINIMIZE
+  parameters:
+  - parameterId: lr
+    doubleValueSpec:
+      minValue: 1e-5
+      maxValue: 1e-3
+      scaleType: UNIT_LOG_SCALE
+  - parameterId: batch_size
+    discreteValueSpec:
+      values: [8, 16, 32]
+  - parameterId: node_embed
+    discreteValueSpec:
+      values: [64, 128, 256]
+  - parameterId: edge_embed
+    discreteValueSpec:
+      values: [64, 128, 256]
+  - parameterId: gnn_layers
+    integerValueSpec:
+      minValue: 2
+      maxValue: 5
+  - parameterId: atn_layers
+    integerValueSpec:
+      minValue: 2
+      maxValue: 4
+  - parameterId: mlp_layers
+    integerValueSpec:
+      minValue: 2
+      maxValue: 4
+  - parameterId: atn_protein_heads
+    discreteValueSpec:
+      values: [8, 16, 32]
+  - parameterId: atn_ligand_heads
+    discreteValueSpec:
+      values: [4, 8, 16]
+  - parameterId: dropout_rate
+    doubleValueSpec:
+      minValue: 0.0
+      maxValue: 0.5
+
+maxTrialCount: 20
+parallelTrialCount: 4

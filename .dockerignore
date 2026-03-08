@@ -1,0 +1,26 @@
+# Ignore large data files
+*.csv
+*.xlsx
+*.tsv
+
+# Ignore all saved PyTorch tensors (you sync these from GCS in your script)
+*.pt
+*.pth
+
+# Ignore Python cache and local environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+env/
+venv/
+
+# Ignore IDE and OS specific files
+.vscode/
+.idea/
+.git/
+.gitignore
+.DS_Store
+Thumbs.db
