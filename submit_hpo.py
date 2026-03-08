@@ -69,9 +69,9 @@ worker_pool_specs = [{
         "args": [
             "--project_id", "plop-486317",
             "--dataset_id", "binding_data",
-            "--protein_dir", "gs://protein-ligand-outcome-prediction/protein",
-            "--ligand_dir", "gs://protein-ligand-outcome-prediction/ligand",
-            "--downsample", "100000",
+            "--protein_dir", "/gcs/protein-ligand-outcome-prediction/protein-smol",
+            "--ligand_dir", "/gcs/protein-ligand-outcome-prediction/ligand-shards/ligands-shards/",
+            "--downsample", "200000",
             "--epochs", "5"
         ]
     },

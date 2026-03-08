@@ -40,6 +40,8 @@ def train(args):
 
     indices = list(range(total))
     train_idx, temp_idx = train_test_split(indices, test_size=0.2, random_state=42)
+    if args.downsample is not None:
+        train_idx = random.sample(train_idx, min(args.downsample, len(train_idx)))
     valid_idx, test_idx = train_test_split(temp_idx, test_size=0.5, random_state=42)
 
     train_dataset = BindingDBDataset(
@@ -61,7 +63,7 @@ def train(args):
         train_dataset.dataset,          # .dataset is the wds pipeline
         batch_size=args.batch_size,
         collate_fn=binding_collate,
-        num_workers=8,                  # wds supports multi-worker streaming
+        num_workers=6,                  # wds supports multi-worker streaming
         pin_memory=True,
         persistent_workers=True
     )
@@ -69,7 +71,7 @@ def train(args):
         valid_dataset.dataset,
         batch_size=args.batch_size,
         collate_fn=binding_collate,
-        num_workers=8,
+        num_workers=6,
         pin_memory=True,
         persistent_workers=True
     )
@@ -202,11 +204,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument(
-        "--model_dir",
-        type=str,
-        default=os.environ.get("AIP_MODEL_DIR", "./model")
-    )
+    parser.add_argument("--model_dir", type=str, default=os.environ.get("AIP_MODEL_DIR", "./model"))
     model_dir = os.environ.get("AIP_MODEL_DIR")
     parser.add_argument("--node_embed", type=int, default=256)
     parser.add_argument("--edge_embed", type=int, default=256)
@@ -216,7 +214,7 @@ if __name__ == "__main__":
     parser.add_argument("--atn_protein_heads", type=int, default=8)
     parser.add_argument("--atn_ligand_heads", type=int, default=8)
     parser.add_argument("--dropout_rate", type=float, default=0.1)
-    # parser.add_argument("--downsample", type=int, default=None)
+    parser.add_argument("--downsample", type=int, default=None)
 
     args = parser.parse_args()
     train(args)
