@@ -61,17 +61,17 @@ def train(args):
         train_dataset.dataset,          # .dataset is the wds pipeline
         batch_size=args.batch_size,
         collate_fn=binding_collate,
-        num_workers=2,                  # wds supports multi-worker streaming
+        num_workers=8,                  # wds supports multi-worker streaming
         pin_memory=True,
-        # NOTE: shuffle=True is invalid for IterableDataset;
-        # shuffling is handled inside wds via .shuffle(1000)
+        persistent_workers=True
     )
     valid_loader = DataLoader(
         valid_dataset.dataset,
         batch_size=args.batch_size,
         collate_fn=binding_collate,
-        num_workers=2,
+        num_workers=8,
         pin_memory=True,
+        persistent_workers=True
     )
 
     model = BasicModel(
@@ -133,8 +133,9 @@ def train(args):
             train_count += column_counts.detach()
 
             if batch_idx % log_interval == 0:
-                logger.info(f"Train Epoch: {epoch} [{batch_idx * len(ligand_batch)}/{len(train_loader.dataset)} "
-                f"({100. * batch_idx / len(train_loader):.0f}%)]\tLoss: {loss.item():.6f}")
+                logger.info(
+                    f"Train Epoch: {epoch} Batch: {batch_idx} Loss: {loss.item():.6f}"
+                )
         
         # VALIDATE
         model.eval()
@@ -201,8 +202,11 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--lr", type=float, default=1e-4)
-    # this line keeps crashing
-    #parser.add_argument("--model_dir", type=str, default=os.environ.get("AIP_MODEL_DIR"))
+    parser.add_argument(
+        "--model_dir",
+        type=str,
+        default=os.environ.get("AIP_MODEL_DIR", "./model")
+    )
     model_dir = os.environ.get("AIP_MODEL_DIR")
     parser.add_argument("--node_embed", type=int, default=256)
     parser.add_argument("--edge_embed", type=int, default=256)
@@ -212,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument("--atn_protein_heads", type=int, default=8)
     parser.add_argument("--atn_ligand_heads", type=int, default=8)
     parser.add_argument("--dropout_rate", type=float, default=0.1)
-    parser.add_argument("--downsample", type=int, default=None)
+    # parser.add_argument("--downsample", type=int, default=None)
 
     args = parser.parse_args()
     train(args)

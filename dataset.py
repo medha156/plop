@@ -51,21 +51,25 @@ class BindingDBDataset:
         # We only store proteins that are actually used in this train or test split
         self.protein_cache = {}
         logger.info(f"Caching proteins for {len(self.active_pids)} unique targets...")
-        prot_ds = wds.WebDataset(protein_urls, shardshuffle=True).decode()
+        prot_ds = wds.WebDataset(protein_urls, shardshuffle=False).decode()
 
         for sample in prot_ds:
             pid = sample["__key__"]
             if pid in self.active_pids:
                 # Convert NumPy back to Torch
-                self.protein_cache[pid] = torch.from_numpy(sample["pyd"]).float()
+                tensor = torch.from_numpy(sample["pyd"]).float().share_memory_()  # Cache in shared memory for multi-worker access
+                self.protein_cache[pid] = tensor
         
         # 5. The Ligand Stream
         # We use 'select' logic to drop ligands not in our split immediately
         self.dataset = (
-            wds.WebDataset(ligand_urls, shardshuffle=0)
-            .shuffle(1000)
+            wds.WebDataset(ligand_urls, shardshuffle=True)
+            .compose(wds.split_by_node)   # For multi-GPU
+            .compose(wds.split_by_worker) # For num_workers > 0
             .decode()
             .compose(self._expand_pairs)
+            .shuffle(20000)
+            .with_epoch(len(self.df))
         )
 
     def __len__(self):
