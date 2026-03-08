@@ -44,7 +44,11 @@ class BindingDBDataset:
         for row in self.df.itertuples():
             if row.mid not in self.lookup:
                 self.lookup[row.mid] = []
-            labels = torch.tensor([row.ki_value, row.kd_value, row.ic50_value], dtype=torch.float32)
+            def to_p(value):
+                if value <= 0:
+                    return -1
+                return -torch.log10(torch.tensor(value)) + 9
+            labels = torch.tensor([to_p(row.ki_value), to_p(row.kd_value), to_p(row.ic50_value)], dtype=torch.float32)
             self.lookup[row.mid].append((row.pid, labels))
 
         # 4. Selective Protein Cache
@@ -63,7 +67,7 @@ class BindingDBDataset:
         # 5. The Ligand Stream
         # We use 'select' logic to drop ligands not in our split immediately
         self.dataset = (
-            wds.WebDataset(ligand_urls, shardshuffle=True)
+            wds.WebDataset(ligand_urls, shardshuffle=7)
             .compose(wds.split_by_node)   # For multi-GPU
             .compose(wds.split_by_worker) # For num_workers > 0
             .decode()
@@ -99,7 +103,7 @@ class BindingDBDataset:
                 continue
 
             ligand_data = sample["pyd"]  # already a Data object, no conversion needed
-            ligand_data.edge_attr = ligand_data.edge_attr.float()  # only this cast needed
+            # ligand_data.edge_attr = ligand_data.edge_attr  # only this cast needed
 
             for pid, labels in self.lookup.get(mid, []):
                 if pid in self.protein_cache:
@@ -125,5 +129,10 @@ def binding_collate(batch):
     for i, p in enumerate(proteins):
         padded_proteins[i, :p.shape[0]] = p
         protein_mask[i, :p.shape[0]] = 1
+
+    # print("COLLATE FUNCTION:")
+    # print("Ligand batch size:", ligand_batch.num_graphs)
+    # print("Padded proteins shape:", padded_proteins.shape)
+    # print("Protein mask shape:", protein_mask.shape)
 
     return ligand_batch, padded_proteins, protein_mask, torch.stack(labels)

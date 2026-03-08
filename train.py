@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 def train(args):
     hpt = hypertune.HyperTune()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Using device:", device)
 
     client = bigquery.Client(project=args.project_id)
     query = f"""
@@ -39,10 +40,13 @@ def train(args):
     total = client.query(query).to_dataframe().iloc[0]['n']
 
     indices = list(range(total))
+    random.seed(42)
     train_idx, temp_idx = train_test_split(indices, test_size=0.2, random_state=42)
     if args.downsample is not None:
         train_idx = random.sample(train_idx, min(args.downsample, len(train_idx)))
     valid_idx, test_idx = train_test_split(temp_idx, test_size=0.5, random_state=42)
+    if args.downsample is not None:
+        valid_idx = random.sample(valid_idx, min(args.downsample, len(valid_idx)))
 
     train_dataset = BindingDBDataset(
         project_id=args.project_id,
@@ -65,7 +69,8 @@ def train(args):
         collate_fn=binding_collate,
         num_workers=6,                  # wds supports multi-worker streaming
         pin_memory=True,
-        persistent_workers=True
+        persistent_workers=True,
+        prefetch_factor=4
     )
     valid_loader = DataLoader(
         valid_dataset.dataset,
@@ -105,6 +110,7 @@ def train(args):
 
         for batch_idx, (ligand_batch, proteins, protein_mask, labels) in enumerate(train_loader):
             ligand_batch = ligand_batch.to(device)
+            ligand_batch.edge_attr = ligand_batch.edge_attr.float()  # Ensure edge attributes are float
             proteins = proteins.to(device)
             protein_mask = protein_mask.to(device)
             labels = labels.to(device)
@@ -201,7 +207,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_id", type=str, required=True)
     parser.add_argument("--protein_dir", type=str, required=True) # Path to protein shards
     parser.add_argument("--ligand_dir", type=str, required=True) # Path to ligand shards
-    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--model_dir", type=str, default=os.environ.get("AIP_MODEL_DIR", "./model"))

@@ -10,7 +10,7 @@ studySpec:
       scaleType: UNIT_LOG_SCALE
   - parameterId: batch_size
     discreteValueSpec:
-      values: [8, 16, 32]
+      values: [32, 64, 128]
   - parameterId: node_embed
     discreteValueSpec:
       values: [64, 128, 256]

@@ -18,24 +18,14 @@ worker_pool_specs = [{
     },
     "replica_count": 1,
     "container_spec": {
-        "image_uri": "us-central1-docker.pkg.dev/plop-486317/training-repo/gnn-hpo:v3",
+        "image_uri": "us-central1-docker.pkg.dev/plop-486317/training-repo/gnn-train:v10",
         "args": [
             "--project_id", "plop-486317",
             "--dataset_id", "binding_data",
-            "--protein_dir", "/gcs/protein-ligand-outcome-prediction/protein-smol",
-            "--ligand_dir", "/gcs/protein-ligand-outcome-prediction/ligand-shards/ligands-shards/",
-            "--downsample", "25000",
-            "--epochs", "2",
-            "--lr", "0.0001",
-            "--gnn_layers", "2",
-            "--atn_layers", "2",
-            "--mlp_layers", "2",
-            "--atn_protein_heads", "4",
-            "--atn_ligand_heads", "4",
-            "--node_embed", "128",
-            "--edge_embed", "64",
-            "--batch_size", "64",
-            "--dropout_rate", "0.1"
+            "--protein_dir", "/gcs/protein-ligand-outcome-prediction/proteins_smol/proteins-{000000..000011}.tar",
+            "--ligand_dir", "/gcs/protein-ligand-outcome-prediction/ligand_shards/ligand_shards/ligands-{000000..000006}.tar",
+            "--downsample", "1000",
+            "--epochs", "2"
         ],
     },
 }]

@@ -65,7 +65,7 @@ worker_pool_specs = [{
     },
     "replica_count": 1,
     "container_spec": {
-        "image_uri": "us-central1-docker.pkg.dev/plop-486317/training-repo/gnn-hpo:v3",
+        "image_uri": "us-central1-docker.pkg.dev/plop-486317/training-repo/gnn-hpo:v4",
         "args": [
             "--project_id", "plop-486317",
             "--dataset_id", "binding_data",
