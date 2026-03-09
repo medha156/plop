@@ -1,3 +1,5 @@
+import math
+
 import torch
 import webdataset as wds
 from torch_geometric.data import Data, Batch
@@ -47,7 +49,7 @@ class BindingDBDataset:
             def to_p(value):
                 if value <= 0:
                     return -1
-                return -torch.log10(torch.tensor(value)) + 9
+                return -math.log10(value) + 9
             labels = torch.tensor([to_p(row.ki_value), to_p(row.kd_value), to_p(row.ic50_value)], dtype=torch.float32)
             self.lookup[row.mid].append((row.pid, labels))
 
@@ -78,23 +80,6 @@ class BindingDBDataset:
 
     def __len__(self):
         return len(self.df)
-
-    def _join_logic(self, sample):
-        mid = sample["__key__"]
-        if mid not in self.active_mids:
-            return None # Skip ligand if it's not in this split
-
-        # Reconstruct Ligand Graph
-        graph_dict = sample["pyd"]
-        ligand_data = Data(**graph_dict)
-
-        # Pair with all required proteins for this split
-        pairs = []
-        for pid, labels in self.lookup.get(mid, []):
-            if pid in self.protein_cache:
-                pairs.append((ligand_data, self.protein_cache[pid], labels))
-        
-        return pairs if pairs else None
     
     def _expand_pairs(self, source):
         for sample in source:
@@ -112,7 +97,6 @@ class BindingDBDataset:
 def binding_collate(batch):
     """Flattens the list-of-lists and performs PyG batching + Protein padding."""
     # WebDataset returns a list of samples; our map returns a list of pairs per sample
-    #flat_batch = [pair for sublist in batch for pair in sublist]
     
     ligands, proteins, labels = zip(*batch)
     

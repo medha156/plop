@@ -53,6 +53,7 @@ def train(args):
         dataset_id=args.dataset_id,
         protein_urls=args.protein_dir,
         ligand_urls=args.ligand_dir,
+        batch_size=args.batch_size,
         split_indices=train_idx,        # <-- filters metadata + protein cache
     )
     valid_dataset = BindingDBDataset(
@@ -60,6 +61,7 @@ def train(args):
         dataset_id=args.dataset_id,
         protein_urls=args.protein_dir,
         ligand_urls=args.ligand_dir,
+        batch_size=args.batch_size,
         split_indices=valid_idx,
     )
 
@@ -120,11 +122,11 @@ def train(args):
             mask = (labels != -1.0).float()
 
             with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
-                preds = model(ligand_batch, proteins, protein_mask)
+                preds, valid = model(ligand_batch, proteins, protein_mask)
 
                 raw_loss = criterion(preds, labels)
 
-                masked_loss_per_element = raw_loss * mask
+                masked_loss_per_element = raw_loss * mask * valid.float()
                 column_sums = masked_loss_per_element.sum(dim=0)
                 column_counts = mask.sum(dim=0).clamp(min=1) # Avoid division by zero
     
@@ -133,6 +135,9 @@ def train(args):
                 # Final loss is the average of the three types
                 # This ensures Ki, Kd, and IC50 contribute 1/3 each to the gradient
                 loss = mean_loss_per_type.mean()
+            
+            if not valid.all().item():
+                logger.warning(f"Batch {batch_idx} contains {(~valid).sum().item()} invalid samples after attention pooling. This may indicate an issue with the data or model architecture.")
 
             loss.backward()
             optimizer.step()
@@ -142,7 +147,7 @@ def train(args):
 
             if batch_idx % log_interval == 0:
                 logger.info(
-                    f"Train Epoch: {epoch} Batch: {batch_idx} Loss: {loss.item():.6f}"
+                    f"Train Epoch: {epoch} [{batch_idx} / {len(train_loader)}] Loss: {loss.item():.6f}"
                 )
         
         # VALIDATE

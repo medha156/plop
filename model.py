@@ -89,6 +89,16 @@ class BasicModel(nn.Module):
             print(f"Shape: {tensor.shape} | Min: {tensor.min()} | Max: {tensor.max()}")
             return True
         return False
+    
+    def masked_max_pool(self, x, mask, dim):
+        """
+        x:    (B, N, D)
+        mask: (B, N) boolean
+        """
+        x = x.masked_fill(~mask.unsqueeze(-1), float("-inf"))
+        x = torch.max(x, dim=dim).values
+        x = torch.nan_to_num(x, neginf=0.0)
+        return x
 
     def forward(self, ligand_data, protein, protein_mask):
         ligand = ligand_data.x
@@ -109,16 +119,18 @@ class BasicModel(nn.Module):
             if self.debug_check(ligand, f"GNN Layer {i}"): break
         ligand, ligand_mask = to_dense_batch(ligand, batch)
 
+        valid = ligand_mask.any(dim=1) & protein_mask.any(dim=1)
+        if not valid.all().item():
+            ligand_mask[~valid, 0] = True
+            protein_mask[~valid, 0] = True
+
         for i, layer in enumerate(self.attention):
             protein, ligand = layer(protein, ligand, mask1=protein_mask, mask2=ligand_mask)
             if self.debug_check(protein, f"Attention Protein Layer {i}"): break
             if self.debug_check(ligand, f"Attention Ligand Layer {i}"): break
         
-        ligand.masked_fill_(~ligand_mask.unsqueeze(-1), -1e9)
-        protein.masked_fill_(~protein_mask.unsqueeze(-1), -1e9)
-
-        ligand = torch.max(ligand, dim=1).values
-        protein = torch.max(protein, dim=1).values
+        ligand = self.masked_max_pool(ligand, ligand_mask, dim=1)
+        protein = self.masked_max_pool(protein, protein_mask, dim=1)
         
         self.debug_check(ligand, "Post-Max-Pool Ligand")
         self.debug_check(protein, "Post-Max-Pool Protein")
@@ -130,4 +142,7 @@ class BasicModel(nn.Module):
             if self.debug_check(x, f"MLP Layer {i}"): break
         
         x = self.output_layer(x)
-        return x
+
+        valid &= ~torch.isnan(x).any(dim=-1)
+
+        return x, valid
