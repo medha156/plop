@@ -59,20 +59,20 @@ parameter_spec = convert_yaml_to_spec(study_spec['parameters'])
 # Define your worker pool (Hardware)
 worker_pool_specs = [{
     "machine_spec": {
-        "machine_type": "g2-standard-8",
+        "machine_type": "g2-standard-16",
         "accelerator_type": "NVIDIA_L4",
         "accelerator_count": 1,
     },
     "replica_count": 1,
     "container_spec": {
-        "image_uri": "us-central1-docker.pkg.dev/plop-486317/training-repo/gnn-hpo:v4",
+        "image_uri": "us-central1-docker.pkg.dev/plop-486317/training-repo/hpo:v67",
         "args": [
             "--project_id", "plop-486317",
             "--dataset_id", "binding_data",
-            "--protein_dir", "/gcs/protein-ligand-outcome-prediction/protein-smol",
-            "--ligand_dir", "/gcs/protein-ligand-outcome-prediction/ligand-shards/ligands-shards/",
+            "--protein_dir", "/gcs/protein-ligand-outcome-prediction/proteins_smol/proteins-{000000..000011}.tar",
+            "--ligand_dir", "/gcs/protein-ligand-outcome-prediction/new_ligand_shards/ligands-{000000..000034}.tar",
             "--downsample", "200000",
-            "--epochs", "5"
+            "--epochs", "2"
         ]
     },
 }]

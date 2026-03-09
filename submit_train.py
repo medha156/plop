@@ -12,7 +12,7 @@ aiplatform.init(
 
 worker_pool_specs = [{
     "machine_spec": {
-        "machine_type": "g2-standard-8",
+        "machine_type": "g2-standard-16",
         "accelerator_type": "NVIDIA_L4",
         "accelerator_count": 1,
     },
@@ -23,7 +23,7 @@ worker_pool_specs = [{
             "--project_id", "plop-486317",
             "--dataset_id", "binding_data",
             "--protein_dir", "/gcs/protein-ligand-outcome-prediction/proteins_smol/proteins-{000000..000011}.tar",
-            "--ligand_dir", "/gcs/protein-ligand-outcome-prediction/ligand_shards/ligand_shards/ligands-{000000..000006}.tar",
+            "--ligand_dir", "/gcs/protein-ligand-outcome-prediction/new_ligand_shards/ligands-{000000..000034}.tar",
             "--downsample", "1000",
             "--epochs", "2"
         ],
