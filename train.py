@@ -67,7 +67,7 @@ def train(args):
         train_dataset.dataset,          # .dataset is the wds pipeline
         batch_size=args.batch_size,
         collate_fn=binding_collate,
-        num_workers=6,                  # wds supports multi-worker streaming
+        num_workers=16,                  # wds supports multi-worker streaming
         pin_memory=True,
         persistent_workers=True,
         prefetch_factor=4
@@ -76,7 +76,7 @@ def train(args):
         valid_dataset.dataset,
         batch_size=args.batch_size,
         collate_fn=binding_collate,
-        num_workers=6,
+        num_workers=16,
         pin_memory=True,
         persistent_workers=True
     )
