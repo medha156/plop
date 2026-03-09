@@ -17,6 +17,7 @@ class BidirectionalAttentionLayer(nn.Module):
     
     def forward(self, x1, x2, mask1=None, mask2=None):
         # Cross-attention: x1 attends to x2
+
         out1, _ = self.attn1(x1, x2, x2, key_padding_mask=~mask2 if mask2 is not None else None)
         out1 = self.ln1(x1 + self.drop1(out1)) # Added residual + norm for stability
         
@@ -82,12 +83,12 @@ class BasicModel(nn.Module):
 
         self.output_layer = nn.Linear(ligand_node_embed + protein_embed, out)
     
-    # def debug_check(self, tensor, name):
-    #     if not torch.isfinite(tensor).all():
-    #         print(f"!!! NAN DETECTED at: {name} !!!")
-    #         print(f"Shape: {tensor.shape} | Min: {tensor.min()} | Max: {tensor.max()}")
-    #         return True
-    #     return False
+    def debug_check(self, tensor, name):
+        if not torch.isfinite(tensor).all():
+            print(f"!!! NAN DETECTED at: {name} !!!")
+            print(f"Shape: {tensor.shape} | Min: {tensor.min()} | Max: {tensor.max()}")
+            return True
+        return False
 
     def forward(self, ligand_data, protein, protein_mask):
         ligand = ligand_data.x
@@ -97,7 +98,7 @@ class BasicModel(nn.Module):
 
         ligand = self.node_init(ligand)
         edge_attr = self.edge_init(edge_attr)
-        # self.debug_check(ligand, "Post-Node-Init")
+        self.debug_check(ligand, "Post-Node-Init")
 
         if self.training:
             edge_index, edge_mask = dropout_edge(edge_index, p=self.gnn[0].dropout_rate)
@@ -105,13 +106,13 @@ class BasicModel(nn.Module):
 
         for i, layer in enumerate(self.gnn):
             ligand, edge_attr = layer(ligand, edge_index, edge_attr)
-            # if self.debug_check(ligand, f"GNN Layer {i}"): break
+            if self.debug_check(ligand, f"GNN Layer {i}"): break
         ligand, ligand_mask = to_dense_batch(ligand, batch)
 
         for i, layer in enumerate(self.attention):
             protein, ligand = layer(protein, ligand, mask1=protein_mask, mask2=ligand_mask)
-            # if self.debug_check(protein, f"Attention Protein Layer {i}"): break
-            # if self.debug_check(ligand, f"Attention Ligand Layer {i}"): break
+            if self.debug_check(protein, f"Attention Protein Layer {i}"): break
+            if self.debug_check(ligand, f"Attention Ligand Layer {i}"): break
         
         ligand.masked_fill_(~ligand_mask.unsqueeze(-1), -1e9)
         protein.masked_fill_(~protein_mask.unsqueeze(-1), -1e9)
@@ -119,14 +120,14 @@ class BasicModel(nn.Module):
         ligand = torch.max(ligand, dim=1).values
         protein = torch.max(protein, dim=1).values
         
-        # self.debug_check(ligand, "Post-Max-Pool Ligand")
-        # self.debug_check(protein, "Post-Max-Pool Protein")
+        self.debug_check(ligand, "Post-Max-Pool Ligand")
+        self.debug_check(protein, "Post-Max-Pool Protein")
         
         x = torch.cat([protein, ligand], dim=-1)
 
         for i, layer in enumerate(self.mlp):
             x = layer(x)
-            # if self.debug_check(x, f"MLP Layer {i}"): break
+            if self.debug_check(x, f"MLP Layer {i}"): break
         
         x = self.output_layer(x)
         return x
