@@ -23,6 +23,9 @@ import re
 from dataset import *
 from model import *
 
+import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
