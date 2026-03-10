@@ -10,7 +10,7 @@ studySpec:
       scaleType: UNIT_LOG_SCALE
   - parameterId: batch_size
     discreteValueSpec:
-      values: [32, 64, 128]
+      values: [32, 64]
   - parameterId: node_embed
     discreteValueSpec:
       values: [64, 128, 256]
@@ -31,14 +31,14 @@ studySpec:
       maxValue: 4
   - parameterId: atn_protein_heads
     discreteValueSpec:
-      values: [8, 16, 32]
+      values: [4, 8, 16]
   - parameterId: atn_ligand_heads
     discreteValueSpec:
       values: [4, 8, 16]
   - parameterId: dropout_rate
     doubleValueSpec:
       minValue: 0.0
-      maxValue: 0.5
+      maxValue: 0.2
 
 maxTrialCount: 20
 parallelTrialCount: 4

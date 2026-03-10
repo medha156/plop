@@ -37,7 +37,7 @@ def convert_yaml_to_spec(yaml_params):
     return spec_map
 
 # Load your existing YAML file
-with open("hp_config.yml", "r") as f:
+with open("hp_finetune_config.yml", "r") as f:
     config = yaml.safe_load(f)
 
 aiplatform.init(
@@ -73,7 +73,7 @@ worker_pool_specs = [{
             "--dataset_id", "binding_data",
             "--protein_dir", "/gcs/protein-ligand-outcome-prediction/proteins_smol/proteins-{000000..000011}.tar",
             "--ligand_dir", "/gcs/protein-ligand-outcome-prediction/shardmmen/ligands-{000000..000032}.tar",
-            "--downsample", "300000",
+            "--downsample", "1000000",
             "--epochs", "5"
         ]
     },
@@ -81,9 +81,9 @@ worker_pool_specs = [{
 
 # Create the Job using the YAML data
 hpo_job = aiplatform.HyperparameterTuningJob(
-    display_name="i_need_a_name_for_this_job",
+    display_name="Finetuning",
     custom_job=aiplatform.CustomJob(
-        display_name="hpo_trial_job",
+        display_name="finetune_job",
         worker_pool_specs=worker_pool_specs
     ),
     metric_spec=metric_spec,

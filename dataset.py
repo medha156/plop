@@ -5,6 +5,7 @@ import webdataset as wds
 from torch_geometric.data import Data, Batch
 import logging
 import numpy as np
+from google.cloud import bigquery
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,6 @@ class BindingDBDataset:
             split_indices: A list or array of integers representing the rows 
                            from the BigQuery table to include in this split.
         """
-        from google.cloud import bigquery
         self.client = bigquery.Client(project=project_id)
         
         # 1. Fetch Full Metadata
@@ -42,7 +42,7 @@ class BindingDBDataset:
             FROM `{project_id}.{dataset_id}.binding_cleaned_clustered`
             WHERE polymerid IS NOT NULL
         """
-        full_df = self.client.query(query).to_dataframe().fillna(-1)
+        full_df = self.client.query(query).to_dataframe().fillna(-1).sort_values(['mid', 'pid']).reset_index(drop=True) # Sorted to get consistent indexing
 
         # 2. Apply the Split Indices
         if split_indices is not None:
@@ -84,18 +84,16 @@ class BindingDBDataset:
         
         # 5. The Ligand Stream
         # We use 'select' logic to drop ligands not in our split immediately
-        self.dataset = (
-            wds.WebDataset(ligand_urls, shardshuffle=35)
-            .compose(wds.split_by_node)   # For multi-GPU
-            .compose(wds.split_by_worker) # For num_workers > 0
-            .decode()
-            .select(lambda sample: sample["__key__"] in self.active_mids)
-            .with_epoch(len(self.active_mids))
-            .compose(self._expand_pairs)
-            .shuffle(20000)
+        self.dataset = wds.DataPipeline(
+            wds.SimpleShardList(ligand_urls),
+            wds.split_by_node,
+            wds.split_by_worker,
+            wds.tarfile_to_samples(),
+            wds.decode(),
+            wds.select(lambda sample: sample["__key__"] in self.active_mids),
+            self._expand_pairs,
+            wds.shuffle(20000)
         )
-
-        self.seen = set()
 
     def __len__(self):
         return len(self.df)
@@ -103,10 +101,6 @@ class BindingDBDataset:
     def _expand_pairs(self, source):
         for sample in source:
             mid = sample["__key__"]
-
-            if mid in self.seen:
-                print(f"Duplicate MID encountered in stream: {mid}")
-            self.seen.add(mid)
 
             ligand_data = sample["pyd"]  # already a Data object, no conversion needed
             # ligand_data.edge_attr = ligand_data.edge_attr  # only this cast needed

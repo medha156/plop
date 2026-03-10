@@ -1,0 +1,22 @@
+studySpec:
+  metrics:
+  - metricId: val_loss
+    goal: MINIMIZE
+  parameters:
+  - parameterId: gnn_layers
+    integerValueSpec:
+      minValue: 5
+      maxValue: 6
+  - parameterId: mlp_layers
+    integerValueSpec:
+      minValue: 3
+      maxValue: 4
+  - parameterId: atn_protein_heads
+    discreteValueSpec:
+      values: [8, 16]
+  - parameterId: atn_ligand_heads
+    discreteValueSpec:
+      values: [8, 16]
+
+maxTrialCount: 12
+parallelTrialCount: 4

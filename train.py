@@ -47,7 +47,7 @@ def train(args):
     valid_idx, test_idx = train_test_split(temp_idx, test_size=0.5, random_state=42)
     if args.downsample is not None:
         valid_idx = random.sample(valid_idx, min(args.downsample, len(valid_idx)))
-
+    
     train_dataset = BindingDBDataset(
         project_id=args.project_id,
         dataset_id=args.dataset_id,
@@ -228,21 +228,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--project_id", type=str, required=True)
     parser.add_argument("--dataset_id", type=str, required=True)
-    parser.add_argument("--protein_dir", type=str, required=True) # Path to protein shards
-    parser.add_argument("--ligand_dir", type=str, required=True) # Path to ligand shards
-    parser.add_argument("--batch_size", type=int, default=64)
+    parser.add_argument("--protein_dir", type=str, required=True)
+    parser.add_argument("--ligand_dir", type=str, required=True)
+    parser.add_argument("--batch_size", type=int, default=64) # Tuned by HPO
     parser.add_argument("--epochs", type=int, default=20)
-    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--lr", type=float, default=7e-4) # Tuned by HPO
     parser.add_argument("--model_dir", type=str, default=os.environ.get("AIP_MODEL_DIR", "./model"))
     model_dir = os.environ.get("AIP_MODEL_DIR")
-    parser.add_argument("--node_embed", type=int, default=256)
-    parser.add_argument("--edge_embed", type=int, default=256)
+    parser.add_argument("--node_embed", type=int, default=64) # Tuned by HPO
+    parser.add_argument("--edge_embed", type=int, default=64) # Tuned by HPO
     parser.add_argument("--gnn_layers", type=int, default=4)
-    parser.add_argument("--atn_layers", type=int, default=2)
+    parser.add_argument("--atn_layers", type=int, default=2) # Tuned by HPO
     parser.add_argument("--mlp_layers", type=int, default=3)
     parser.add_argument("--atn_protein_heads", type=int, default=8)
     parser.add_argument("--atn_ligand_heads", type=int, default=8)
-    parser.add_argument("--dropout_rate", type=float, default=0.1)
+    parser.add_argument("--dropout_rate", type=float, default=0.1) # Tuned by HPO
     parser.add_argument("--downsample", type=int, default=None)
 
     args = parser.parse_args()
