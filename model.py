@@ -119,10 +119,10 @@ class BasicModel(nn.Module):
             if self.debug_check(ligand, f"GNN Layer {i}"): break
         ligand, ligand_mask = to_dense_batch(ligand, batch)
 
-        valid = ligand_mask.any(dim=1) & protein_mask.any(dim=1)
-        if not valid.all().item():
-            ligand_mask[~valid, 0] = True
-            protein_mask[~valid, 0] = True
+        valid_mask = ligand_mask.any(dim=1) & protein_mask.any(dim=1)
+        if not valid_mask.all().item():
+            ligand_mask[~valid_mask, 0] = True
+            protein_mask[~valid_mask, 0] = True
 
         for i, layer in enumerate(self.attention):
             protein, ligand = layer(protein, ligand, mask1=protein_mask, mask2=ligand_mask)
@@ -143,6 +143,6 @@ class BasicModel(nn.Module):
         
         x = self.output_layer(x)
 
-        valid &= ~torch.isnan(x).any(dim=-1)
+        valid_mask &= ~torch.isnan(x).any(dim=-1)
 
-        return x, valid
+        return x, valid_mask

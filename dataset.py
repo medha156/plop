@@ -9,7 +9,23 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 class BindingDBDataset:
-    def __init__(self, project_id, dataset_id, protein_urls, ligand_urls, split_indices=None):
+    protein_cache = {}
+
+    @staticmethod
+    def cache_proteins(protein_urls, *instances):
+        active_pids = set().union(*(instance.active_pids for instance in instances))
+
+        logger.info(f"Caching proteins for {len(active_pids)} unique targets...")
+        prot_ds = wds.WebDataset(protein_urls, shardshuffle=False).decode()
+
+        for sample in prot_ds:
+            pid = sample["__key__"]
+            if pid in active_pids and pid not in BindingDBDataset.protein_cache:
+                # Convert NumPy back to Torch
+                tensor = torch.from_numpy(sample["pyd"]).float().share_memory_()  # Cache in shared memory for multi-worker access
+                BindingDBDataset.protein_cache[pid] = tensor
+
+    def __init__(self, project_id, dataset_id, ligand_urls, num_workers=1, split_indices=None):
         """
         Args:
             split_indices: A list or array of integers representing the rows 
@@ -55,28 +71,31 @@ class BindingDBDataset:
 
         # 4. Selective Protein Cache
         # We only store proteins that are actually used in this train or test split
-        self.protein_cache = {}
-        logger.info(f"Caching proteins for {len(self.active_pids)} unique targets...")
-        prot_ds = wds.WebDataset(protein_urls, shardshuffle=False).decode()
+        # self.protein_cache = {}
+        # logger.info(f"Caching proteins for {len(self.active_pids)} unique targets...")
+        # prot_ds = wds.WebDataset(protein_urls, shardshuffle=False).decode()
 
-        for sample in prot_ds:
-            pid = sample["__key__"]
-            if pid in self.active_pids:
-                # Convert NumPy back to Torch
-                tensor = torch.from_numpy(sample["pyd"]).float().share_memory_()  # Cache in shared memory for multi-worker access
-                self.protein_cache[pid] = tensor
+        # for sample in prot_ds:
+        #     pid = sample["__key__"]
+        #     if pid in self.active_pids:
+        #         # Convert NumPy back to Torch
+        #         tensor = torch.from_numpy(sample["pyd"]).float().share_memory_()  # Cache in shared memory for multi-worker access
+        #         self.protein_cache[pid] = tensor
         
         # 5. The Ligand Stream
         # We use 'select' logic to drop ligands not in our split immediately
         self.dataset = (
-            wds.WebDataset(ligand_urls, shardshuffle=7)
+            wds.WebDataset(ligand_urls, shardshuffle=35)
             .compose(wds.split_by_node)   # For multi-GPU
             .compose(wds.split_by_worker) # For num_workers > 0
             .decode()
+            .select(lambda sample: sample["__key__"] in self.active_mids)
+            .with_epoch(len(self.active_mids))
             .compose(self._expand_pairs)
             .shuffle(20000)
-            .with_epoch(len(self.df))
         )
+
+        self.seen = set()
 
     def __len__(self):
         return len(self.df)
@@ -84,15 +103,17 @@ class BindingDBDataset:
     def _expand_pairs(self, source):
         for sample in source:
             mid = sample["__key__"]
-            if mid not in self.active_mids:
-                continue
+
+            if mid in self.seen:
+                print(f"Duplicate MID encountered in stream: {mid}")
+            self.seen.add(mid)
 
             ligand_data = sample["pyd"]  # already a Data object, no conversion needed
             # ligand_data.edge_attr = ligand_data.edge_attr  # only this cast needed
 
             for pid, labels in self.lookup.get(mid, []):
-                if pid in self.protein_cache:
-                    yield (ligand_data, self.protein_cache[pid], labels)
+                if pid in BindingDBDataset.protein_cache:
+                    yield (ligand_data, BindingDBDataset.protein_cache[pid], labels)
 
 def binding_collate(batch):
     """Flattens the list-of-lists and performs PyG batching + Protein padding."""
@@ -100,8 +121,17 @@ def binding_collate(batch):
     
     ligands, proteins, labels = zip(*batch)
     
+    non_empty = [i for i, (l, p) in enumerate(zip(ligands, proteins)) if l.num_nodes > 0 and p.shape[0] > 0]
+    ligands = [ligands[i] for i in non_empty]
+    proteins = [proteins[i] for i in non_empty]
+    labels = [labels[i] for i in non_empty]
+
+    if len(ligands) == 0:
+        return None, None, None, None
+
     # Batch ligands (GNN)
     ligand_batch = Batch.from_data_list(ligands)
+    ligand_batch.edge_attr = ligand_batch.edge_attr.float()  # Ensure edge attributes are float
 
     # Pad proteins (Sequence Length x 480)
     max_len = max(p.shape[0] for p in proteins)

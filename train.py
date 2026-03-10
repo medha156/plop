@@ -51,19 +51,18 @@ def train(args):
     train_dataset = BindingDBDataset(
         project_id=args.project_id,
         dataset_id=args.dataset_id,
-        protein_urls=args.protein_dir,
+        # protein_urls=args.protein_dir,
         ligand_urls=args.ligand_dir,
-        batch_size=args.batch_size,
         split_indices=train_idx,        # <-- filters metadata + protein cache
     )
     valid_dataset = BindingDBDataset(
         project_id=args.project_id,
         dataset_id=args.dataset_id,
-        protein_urls=args.protein_dir,
+        # protein_urls=args.protein_dir,
         ligand_urls=args.ligand_dir,
-        batch_size=args.batch_size,
         split_indices=valid_idx,
     )
+    BindingDBDataset.cache_proteins(args.protein_dir, train_dataset, valid_dataset)
 
     train_loader = DataLoader(
         train_dataset.dataset,          # .dataset is the wds pipeline
@@ -80,7 +79,8 @@ def train(args):
         collate_fn=binding_collate,
         num_workers=16,
         pin_memory=True,
-        persistent_workers=True
+        persistent_workers=True,
+        prefetch_factor=4
     )
 
     model = BasicModel(
@@ -111,8 +111,11 @@ def train(args):
         train_count = torch.zeros(3, device=device)
 
         for batch_idx, (ligand_batch, proteins, protein_mask, labels) in enumerate(train_loader):
+            if ligand_batch is None:
+                logger.warning(f"Batch {batch_idx} contains no valid samples after collate filtering. Skipping.")
+                continue
+
             ligand_batch = ligand_batch.to(device)
-            ligand_batch.edge_attr = ligand_batch.edge_attr.float()  # Ensure edge attributes are float
             proteins = proteins.to(device)
             protein_mask = protein_mask.to(device)
             labels = labels.to(device)
@@ -122,13 +125,15 @@ def train(args):
             mask = (labels != -1.0).float()
 
             with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
-                preds, valid = model(ligand_batch, proteins, protein_mask)
+                preds, valid_mask = model(ligand_batch, proteins, protein_mask)
 
                 raw_loss = criterion(preds, labels)
 
-                masked_loss_per_element = raw_loss * mask * valid.float()
+                full_mask = mask * valid_mask.float().unsqueeze(1)
+
+                masked_loss_per_element = raw_loss * full_mask
                 column_sums = masked_loss_per_element.sum(dim=0)
-                column_counts = mask.sum(dim=0).clamp(min=1) # Avoid division by zero
+                column_counts = full_mask.sum(dim=0).clamp(min=1) # Avoid division by zero
     
                 mean_loss_per_type = column_sums / column_counts
     
@@ -136,8 +141,8 @@ def train(args):
                 # This ensures Ki, Kd, and IC50 contribute 1/3 each to the gradient
                 loss = mean_loss_per_type.mean()
             
-            if not valid.all().item():
-                logger.warning(f"Batch {batch_idx} contains {(~valid).sum().item()} invalid samples after attention pooling. This may indicate an issue with the data or model architecture.")
+            if not valid_mask.all().item():
+                logger.warning(f"Training batch {batch_idx} contains {(~valid_mask).sum().item()} invalid samples after attention pooling. This may indicate an issue with the data or model architecture.")
 
             loss.backward()
             optimizer.step()
@@ -147,7 +152,7 @@ def train(args):
 
             if batch_idx % log_interval == 0:
                 logger.info(
-                    f"Train Epoch: {epoch} [{batch_idx} / {len(train_loader)}] Loss: {loss.item():.6f}"
+                    f"Train Epoch: {epoch} Batch: {batch_idx} x {args.batch_size} Loss: {loss.item():.6f}"
                 )
         
         # VALIDATE
@@ -157,7 +162,11 @@ def train(args):
         
         # torch.no_grad() prevents memory buildup and speeds up the loop
         with torch.no_grad():
-            for ligand_batch, proteins, protein_mask, labels in valid_loader:
+            for batch_idx, (ligand_batch, proteins, protein_mask, labels) in enumerate(valid_loader):
+                if ligand_batch is None:
+                    logger.warning(f"Validation batch {batch_idx} contains no valid samples after collate filtering. Skipping.")
+                    continue
+
                 ligand_batch = ligand_batch.to(device)
                 proteins = proteins.to(device)
                 protein_mask = protein_mask.to(device)
@@ -166,16 +175,25 @@ def train(args):
                 mask = (labels != -1.0).float()
 
                 with torch.amp.autocast(device_type='cuda', dtype=torch.bfloat16):
-                    preds = model(ligand_batch, proteins, protein_mask)
+                    preds, valid_mask = model(ligand_batch, proteins, protein_mask)
 
                     raw_loss = criterion(preds, labels)
 
-                    masked_loss_per_element = raw_loss * mask
+                    masked_loss_per_element = raw_loss * mask * valid_mask.float().unsqueeze(1)
                     column_sums = masked_loss_per_element.sum(dim=0)
                     column_counts = mask.sum(dim=0).clamp(min=1) # Avoid division by zero
 
+                if not valid_mask.all().item():
+                    logger.warning(f"Validation batch {batch_idx} contains {(~valid_mask).sum().item()} invalid samples after attention pooling. This may indicate an issue with the data or model architecture.")
+
                 valid_sum_loss += column_sums.detach()
                 valid_count += column_counts.detach()
+                
+                if batch_idx % log_interval == 0:
+                    interim_valid_loss = (valid_sum_loss / valid_count.clamp(min=1)).mean().item()
+                    logger.info(
+                        f"Valid Epoch: {epoch} Batch: {batch_idx} x {args.batch_size} Interim Val Loss: {interim_valid_loss:.6f}"
+                    )
         
         train_loss_column = train_sum_loss / train_count
         train_loss_total = train_loss_column.mean()

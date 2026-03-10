@@ -1,4 +1,5 @@
 from google.cloud import aiplatform
+import sys
 
 PROJECT_ID = "plop-486317"
 REGION = "us-central1"
@@ -18,20 +19,20 @@ worker_pool_specs = [{
     },
     "replica_count": 1,
     "container_spec": {
-        "image_uri": "us-central1-docker.pkg.dev/plop-486317/training-repo/hpo_hopefully_working",
+        "image_uri": "us-central1-docker.pkg.dev/plop-486317/training-repo/" + sys.argv[1],
         "args": [
             "--project_id", "plop-486317",
             "--dataset_id", "binding_data",
             "--protein_dir", "/gcs/protein-ligand-outcome-prediction/proteins_smol/proteins-{000000..000011}.tar",
             "--ligand_dir", "/gcs/protein-ligand-outcome-prediction/new_ligand_shards/ligands-{000000..000034}.tar",
-            "--downsample", "200000",
+            "--downsample", "50000",
             "--epochs", "2"
         ],
     },
 }]
 
 job = aiplatform.CustomJob(
-    display_name="gnn_training_downsample_25k",
+    display_name="gnn_training_downsample_50k",
     worker_pool_specs=worker_pool_specs,
 )
 
