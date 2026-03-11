@@ -25,8 +25,6 @@ worker_pool_specs = [{
             "--dataset_id", "binding_data",
             "--protein_dir", "/gcs/protein-ligand-outcome-prediction/proteins_smol/proteins-{000000..000011}.tar",
             "--ligand_dir", "/gcs/protein-ligand-outcome-prediction/shardmmen/ligands-{000000..000032}.tar",
-            "--downsample", "50000",
-            "--epochs", "2"
         ],
     },
 }]
