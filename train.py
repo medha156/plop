@@ -30,7 +30,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def train(args):
-    hpt = hypertune.HyperTune()
+    # hpt = hypertune.HyperTune()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
@@ -44,12 +44,9 @@ def train(args):
 
     indices = list(range(total))
     random.seed(42)
-    train_idx, temp_idx = train_test_split(indices, test_size=0.2, random_state=42)
+    train_idx, test_idx = train_test_split(indices, test_size=0.2, random_state=42)
     if args.downsample is not None:
         train_idx = random.sample(train_idx, min(args.downsample, len(train_idx)))
-    valid_idx, test_idx = train_test_split(temp_idx, test_size=0.5, random_state=42)
-    if args.downsample is not None:
-        valid_idx = random.sample(valid_idx, min(args.downsample, len(valid_idx)))
     
     train_dataset = BindingDBDataset(
         project_id=args.project_id,
@@ -58,14 +55,14 @@ def train(args):
         ligand_urls=args.ligand_dir,
         split_indices=train_idx,        # <-- filters metadata + protein cache
     )
-    valid_dataset = BindingDBDataset(
+    test_dataset = BindingDBDataset(
         project_id=args.project_id,
         dataset_id=args.dataset_id,
         # protein_urls=args.protein_dir,
         ligand_urls=args.ligand_dir,
-        split_indices=valid_idx,
+        split_indices=test_idx,         # <-- filters metadata + protein cache
     )
-    BindingDBDataset.cache_proteins(args.protein_dir, train_dataset, valid_dataset)
+    BindingDBDataset.cache_proteins(args.protein_dir, train_dataset, test_dataset)
 
     train_loader = DataLoader(
         train_dataset.dataset,          # .dataset is the wds pipeline
@@ -76,8 +73,8 @@ def train(args):
         persistent_workers=True,
         prefetch_factor=4
     )
-    valid_loader = DataLoader(
-        valid_dataset.dataset,
+    test_loader = DataLoader(
+        test_dataset.dataset,
         batch_size=args.batch_size,
         collate_fn=binding_collate,
         num_workers=16,
@@ -160,12 +157,12 @@ def train(args):
         
         # VALIDATE
         model.eval()
-        valid_sum_loss = torch.zeros(3, device=device)
-        valid_count = torch.zeros(3, device=device)
+        test_sum_loss = torch.zeros(3, device=device)
+        test_count = torch.zeros(3, device=device)
         
         # torch.no_grad() prevents memory buildup and speeds up the loop
         with torch.no_grad():
-            for batch_idx, (ligand_batch, proteins, protein_mask, labels) in enumerate(valid_loader):
+            for batch_idx, (ligand_batch, proteins, protein_mask, labels) in enumerate(test_loader):
                 if ligand_batch is None:
                     logger.warning(f"Validation batch {batch_idx} contains no valid samples after collate filtering. Skipping.")
                     continue
@@ -189,19 +186,19 @@ def train(args):
                 if not valid_mask.all().item():
                     logger.warning(f"Validation batch {batch_idx} contains {(~valid_mask).sum().item()} invalid samples after attention pooling. This may indicate an issue with the data or model architecture.")
 
-                valid_sum_loss += column_sums.detach()
-                valid_count += column_counts.detach()
+                test_sum_loss += column_sums.detach()
+                test_count += column_counts.detach()
                 
                 if batch_idx % log_interval == 0:
-                    interim_valid_loss = (valid_sum_loss / valid_count.clamp(min=1)).mean().item()
+                    interim_test_loss = (test_sum_loss / test_count.clamp(min=1)).mean().item()
                     logger.info(
-                        f"Valid Epoch: {epoch} Batch: {batch_idx} x {args.batch_size} Interim Val Loss: {interim_valid_loss:.6f}"
+                        f"Test Epoch: {epoch} Batch: {batch_idx} x {args.batch_size} Interim Test Loss: {interim_test_loss:.6f}"
                     )
         
         train_loss_column = train_sum_loss / train_count
         train_loss_total = train_loss_column.mean()
-        valid_loss_column = valid_sum_loss / valid_count
-        valid_loss_total = valid_loss_column.mean()
+        test_loss_column = test_sum_loss / test_count
+        test_loss_total = test_loss_column.mean()
 
         epoch_duration = time.time() - start_time
         duration_str = str(timedelta(seconds=int(epoch_duration)))
@@ -211,16 +208,16 @@ def train(args):
 Epoch {epoch:03d} Summary | Time: {duration_str}
 {'-'*40}
 TRAIN | Total: {train_loss_total:.4f} | Ki: {train_loss_column[0]:.4f} | Kd: {train_loss_column[1]:.4f} | IC50: {train_loss_column[2]:.4f}
-VALID | Total: {valid_loss_total:.4f} | Ki: {valid_loss_column[0]:.4f} | Kd: {valid_loss_column[1]:.4f} | IC50: {valid_loss_column[2]:.4f}
+TEST | Total: {test_loss_total:.4f} | Ki: {test_loss_column[0]:.4f} | Kd: {test_loss_column[1]:.4f} | IC50: {test_loss_column[2]:.4f}
 {'='*40}
 """
         logger.info(summary)
 
-        hpt.report_hyperparameter_tuning_metric(
-            hyperparameter_metric_tag='val_loss',
-            metric_value=valid_loss_total.item(), 
-            global_step=epoch
-        )
+        # hpt.report_hyperparameter_tuning_metric(
+        #     hyperparameter_metric_tag='val_loss',
+        #     metric_value=valid_loss_total.item(), 
+        #     global_step=epoch
+        # )
 
     # Save to GCS-mounted directory
     os.makedirs(args.model_dir, exist_ok=True)
@@ -233,18 +230,17 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_id", type=str, required=True)
     parser.add_argument("--protein_dir", type=str, required=True)
     parser.add_argument("--ligand_dir", type=str, required=True)
-    parser.add_argument("--batch_size", type=int, default=64) # Tuned by HPO
+    parser.add_argument("--batch_size", type=int, default=32) # Tuned by HPO
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--lr", type=float, default=7e-4) # Tuned by HPO
     parser.add_argument("--model_dir", type=str, default=os.environ.get("AIP_MODEL_DIR", "./model"))
-    model_dir = os.environ.get("AIP_MODEL_DIR")
     parser.add_argument("--node_embed", type=int, default=64) # Tuned by HPO
     parser.add_argument("--edge_embed", type=int, default=64) # Tuned by HPO
-    parser.add_argument("--gnn_layers", type=int, default=4)
+    parser.add_argument("--gnn_layers", type=int, default=5) # Tuned by HPO
     parser.add_argument("--atn_layers", type=int, default=2) # Tuned by HPO
-    parser.add_argument("--mlp_layers", type=int, default=3)
-    parser.add_argument("--atn_protein_heads", type=int, default=8)
-    parser.add_argument("--atn_ligand_heads", type=int, default=8)
+    parser.add_argument("--mlp_layers", type=int, default=3) # Tuned by HPO
+    parser.add_argument("--atn_protein_heads", type=int, default=16) # Tuned by HPO
+    parser.add_argument("--atn_ligand_heads", type=int, default=8) # Tuned by HPO
     parser.add_argument("--dropout_rate", type=float, default=0.1) # Tuned by HPO
     parser.add_argument("--downsample", type=int, default=None)
 
