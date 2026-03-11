@@ -219,9 +219,9 @@ TEST | Total: {test_loss_total:.4f} | Ki: {test_loss_column[0]:.4f} | Kd: {test_
         #     global_step=epoch
         # )
 
-    # Save to GCS-mounted directory
-    os.makedirs(args.model_dir, exist_ok=True)
-    torch.save(model.state_dict(), os.path.join(args.model_dir, "model.pt"))
+        # Save to GCS-mounted directory
+        os.makedirs(args.model_dir, exist_ok=True)
+        torch.save(model.state_dict(), os.path.join(args.model_dir, f"model_e{epoch}.pt"))
 
 if __name__ == "__main__":
     print("RUNNING TRAIN FILE VERSION UPDATED")
