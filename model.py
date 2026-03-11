@@ -79,7 +79,7 @@ class BasicModel(nn.Module):
             nn.Linear(ligand_node_embed + protein_embed, ligand_node_embed + protein_embed), 
             nn.ReLU(),
             nn.Dropout(dropout_rate)
-        ) for _ in range(mlp_num_layers - 1)])
+        ) for _ in range(mlp_num_layers)])
 
         self.output_layer = nn.Linear(ligand_node_embed + protein_embed, out)
     

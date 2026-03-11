@@ -238,7 +238,7 @@ if __name__ == "__main__":
     parser.add_argument("--edge_embed", type=int, default=64) # Tuned by HPO
     parser.add_argument("--gnn_layers", type=int, default=5) # Tuned by HPO
     parser.add_argument("--atn_layers", type=int, default=2) # Tuned by HPO
-    parser.add_argument("--mlp_layers", type=int, default=3) # Tuned by HPO
+    parser.add_argument("--mlp_layers", type=int, default=2) # Tuned by HPO
     parser.add_argument("--atn_protein_heads", type=int, default=16) # Tuned by HPO
     parser.add_argument("--atn_ligand_heads", type=int, default=8) # Tuned by HPO
     parser.add_argument("--dropout_rate", type=float, default=0.1) # Tuned by HPO
