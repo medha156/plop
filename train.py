@@ -18,6 +18,7 @@ from torch_geometric.data import Batch
 import hypertune
 import logging
 import re
+import pandas
 
 # Local modules
 from dataset import *
@@ -34,13 +35,15 @@ def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
-    client = bigquery.Client(project=args.project_id)
-    query = f"""
-    SELECT COUNT(*) as n
-    FROM `{args.project_id}.{args.dataset_id}.binding_cleaned_clustered`
-    WHERE polymerid IS NOT NULL
-    """
-    total = client.query(query).to_dataframe().iloc[0]['n']
+    df = pd.read_csv("pairs.csv")
+    total = len(df)
+    #client = bigquery.Client(project=args.project_id)
+    #query = f"""
+    #SELECT COUNT(*) as n
+    #FROM `{args.project_id}.{args.dataset_id}.binding_cleaned_clustered`
+    #WHERE polymerid IS NOT NULL
+    #"""
+    #total = client.query(query).to_dataframe().iloc[0]['n']
 
     indices = list(range(total))
     random.seed(42)
@@ -70,7 +73,7 @@ def train(args):
         collate_fn=binding_collate,
         num_workers=16,                  # wds supports multi-worker streaming
         pin_memory=True,
-        persistent_workers=True,
+        persistent_workers=False,
         prefetch_factor=4
     )
     test_loader = DataLoader(
@@ -79,7 +82,7 @@ def train(args):
         collate_fn=binding_collate,
         num_workers=16,
         pin_memory=True,
-        persistent_workers=True,
+        persistent_workers=False,
         prefetch_factor=4
     )
 
@@ -95,7 +98,8 @@ def train(args):
         num_heads_protein=args.atn_protein_heads,
         num_heads_ligand=args.atn_ligand_heads,
         out=3,
-        dropout_rate=args.dropout_rate
+        dropout_rate=args.dropout_rate,
+        pooling=args.pool
     ).to(device)
 
     optimizer = Adam(model.parameters(), lr=args.lr)
@@ -243,6 +247,7 @@ if __name__ == "__main__":
     parser.add_argument("--atn_ligand_heads", type=int, default=8) # Tuned by HPO
     parser.add_argument("--dropout_rate", type=float, default=0.1) # Tuned by HPO
     parser.add_argument("--downsample", type=int, default=None)
+    parser.add_argument("--pool", choices=["max", "mean", "sum"], default="max")
 
     args = parser.parse_args()
     train(args)

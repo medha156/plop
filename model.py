@@ -62,7 +62,8 @@ class BasicModel(nn.Module):
                  gnn_num_layers,
                  attn_num_layers, num_heads_protein, num_heads_ligand,
                  mlp_num_layers, out,
-                 dropout_rate):
+                 dropout_rate,
+                 pooling):
         super().__init__()
 
         # Initial linear layer to move the graph into the expected dimensions
@@ -82,6 +83,15 @@ class BasicModel(nn.Module):
         ) for _ in range(mlp_num_layers)])
 
         self.output_layer = nn.Linear(ligand_node_embed + protein_embed, out)
+
+        if pooling == 'max':
+            self.pooling_fn = self.masked_max_pool
+        elif pooling == 'mean':
+            self.pooling_fn = self.masked_mean_pool
+        elif pooling == 'sum':
+            self.pooling_fn = self.masked_sum_pool
+        else:
+            raise ValueError("Unknown pooling value. Options are 'max', 'mean', and 'sum'")
     
     def debug_check(self, tensor, name):
         if not torch.isfinite(tensor).all():
@@ -99,6 +109,31 @@ class BasicModel(nn.Module):
         x = torch.max(x, dim=dim).values
         x = torch.nan_to_num(x, neginf=0.0)
         return x
+
+    def masked_mean_pool(self, x, mask, dim):
+        """
+        x:    (B, N, D)
+        mask: (B, N) boolean
+        """
+        mask = mask.unsqueeze(-1)           # (B, N, 1)
+        x *= mask                           # zero out masked elements
+
+        sum_x = x.sum(dim=dim)              # sum of valid elements
+        count = mask.sum(dim=dim).clamp(min=1)  # number of valid elements
+
+        mean_x = sum_x / count
+        return mean_x
+    
+    def masked_sum_pool(self, x, mask, dim):
+        """
+        x:    (B, N, D)
+        mask: (B, N) boolean
+        """
+        mask = mask.unsqueeze(-1)           # (B, N, 1)
+        x = x * mask                        # zero out masked elements
+
+        sum_x = x.sum(dim=dim)              # sum of valid elements
+        return sum_x
 
     def forward(self, ligand_data, protein, protein_mask):
         ligand = ligand_data.x
@@ -129,8 +164,8 @@ class BasicModel(nn.Module):
             if self.debug_check(protein, f"Attention Protein Layer {i}"): break
             if self.debug_check(ligand, f"Attention Ligand Layer {i}"): break
         
-        ligand = self.masked_max_pool(ligand, ligand_mask, dim=1)
-        protein = self.masked_max_pool(protein, protein_mask, dim=1)
+        ligand = self.pooling_fn(ligand, ligand_mask, dim=1)
+        protein = self.pooling_fn(protein, protein_mask, dim=1)
         
         self.debug_check(ligand, "Post-Max-Pool Ligand")
         self.debug_check(protein, "Post-Max-Pool Protein")

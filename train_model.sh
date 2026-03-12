@@ -7,8 +7,8 @@
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
 
-ulimit -n 65535
 source ~/plop_env/bin/activate
+ulimit -n 65535
 export GOOGLE_APPLICATION_CREDENTIALS="/home/users/saarlip/plop/key.json"
 python train.py \
     --project_id plop-486317 \
