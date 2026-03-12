@@ -13,6 +13,8 @@ echo "Starting job"
 
 ulimit -n 65535
 source ~/plop/grah/bin/activate
+pip install -r ~/plop/requirements.txt --quiet
+
 export GOOGLE_APPLICATION_CREDENTIALS="/home/users/medha156/.config/gcloud/application_default_credentials.json"
 python train.py \
     --project_id plop-486317 \
