@@ -1,0 +1,60 @@
+Starting job
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+WARNING:google.auth._default:No project ID could be determined. Consider running `gcloud config set project` or setting the GOOGLE_CLOUD_PROJECT environment variable
+/home/users/medha156/plop/grah/lib/python3.14/site-packages/google/cloud/bigquery/table.py:1994: UserWarning: BigQuery Storage module not found, fetch data with the REST endpoint instead.
+  warnings.warn(
+INFO:dataset:Split applied: 2875280 samples.
+INFO:dataset:Split applied: 718821 samples.
+INFO:dataset:Caching proteins for 10298 unique targets...
+RUNNING TRAIN FILE VERSION UPDATED
+Using device: cuda
+Traceback (most recent call last):
+  File "/home/users/medha156/plop/train.py", line 248, in <module>
+    train(args)
+    ~~~~~^^^^^^
+  File "/home/users/medha156/plop/train.py", line 113, in train
+    for batch_idx, (ligand_batch, proteins, protein_mask, labels) in enumerate(train_loader):
+                                                                     ~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 495, in __iter__
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 433, in _get_iterator
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 1192, in __init__
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/process.py", line 121, in start
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/context.py", line 224, in _Popen
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/context.py", line 300, in _Popen
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/popen_forkserver.py", line 35, in __init__
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/popen_fork.py", line 20, in __init__
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/popen_forkserver.py", line 47, in _launch
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/reduction.py", line 60, in dump
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/multiprocessing/reductions.py", line 615, in reduce_storage
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/storage.py", line 449, in wrapper
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/storage.py", line 524, in _share_fd_cpu_
+RuntimeError: unable to open shared memory object </torch_1846131_2811012309_65487> in read-write mode: Too many open files (24)
+when serializing tuple item 0
+when serializing torch.storage.TypedStorage reconstructor arguments
+when serializing torch.storage.TypedStorage object
+when serializing tuple item 1
+when serializing torch.Tensor reconstructor arguments
+when serializing torch.Tensor object
+when serializing tuple item 1
+when serializing list item 15
+when serializing dict item 4814
+when serializing dict item 'lookup'
+when serializing dataset.BindingDBDataset state
+when serializing dataset.BindingDBDataset object
+when serializing tuple item 0
+when serializing method reconstructor arguments
+when serializing method object
+when serializing tuple item 0
+when serializing dict item 'args'
+when serializing webdataset.filters.FilterFunction state
+when serializing webdataset.filters.FilterFunction object
+when serializing list item 5
+when serializing dict item 'pipeline'
+when serializing webdataset.pipeline.DataPipeline state
+when serializing webdataset.pipeline.DataPipeline object
+when serializing tuple item 1
+when serializing dict item '_args'
+when serializing multiprocessing.context.Process state
+when serializing multiprocessing.context.Process object

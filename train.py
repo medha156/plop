@@ -22,6 +22,8 @@ import re
 # Local modules
 from dataset import *
 from model import *
+import torch.multiprocessing as mp
+mp.set_sharing_strategy('file_system')
 
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"

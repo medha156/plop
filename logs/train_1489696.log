@@ -1,0 +1,82 @@
+Starting job
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+WARNING:google.auth._default:No project ID could be determined. Consider running `gcloud config set project` or setting the GOOGLE_CLOUD_PROJECT environment variable
+/home/users/medha156/plop/grah/lib/python3.14/site-packages/google/cloud/bigquery/table.py:1994: UserWarning: BigQuery Storage module not found, fetch data with the REST endpoint instead.
+  warnings.warn(
+INFO:dataset:Split applied: 2875280 samples.
+INFO:dataset:Split applied: 718821 samples.
+INFO:dataset:Caching proteins for 10298 unique targets...
+RUNNING TRAIN FILE VERSION UPDATED
+Using device: cuda
+Traceback (most recent call last):
+  File "/home/users/medha156/plop/train.py", line 250, in <module>
+    train(args)
+    ~~~~~^^^^^^
+  File "/home/users/medha156/plop/train.py", line 115, in train
+    for batch_idx, (ligand_batch, proteins, protein_mask, labels) in enumerate(train_loader):
+                                                                     ~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 495, in __iter__
+    self._iterator = self._get_iterator()
+                     ~~~~~~~~~~~~~~~~~~^^
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 433, in _get_iterator
+    return _MultiProcessingDataLoaderIter(self)
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 1192, in __init__
+    w.start()
+    ~~~~~~~^^
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/process.py", line 121, in start
+    self._popen = self._Popen(self)
+                  ~~~~~~~~~~~^^^^^^
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/context.py", line 224, in _Popen
+    return _default_context.get_context().Process._Popen(process_obj)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/context.py", line 300, in _Popen
+    return Popen(process_obj)
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/popen_forkserver.py", line 35, in __init__
+    super().__init__(process_obj)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/popen_fork.py", line 20, in __init__
+    self._launch(process_obj)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/popen_forkserver.py", line 47, in _launch
+    reduction.dump(process_obj, buf)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/software/spack/opt/spack/linux-x86_64_v3/python-3.14.2-h3pybvsxurte2fyoiy7n7d57dvntmfr5/lib/python3.14/multiprocessing/reduction.py", line 60, in dump
+    ForkingPickler(file, protocol).dump(obj)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/multiprocessing/reductions.py", line 604, in reduce_storage
+    metadata = storage._share_filename_cpu_()
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/storage.py", line 449, in wrapper
+    return fn(self, *args, **kwargs)
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/storage.py", line 528, in _share_filename_cpu_
+    return super()._share_filename_cpu_(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+RuntimeError: unable to mmap 76 bytes from file </torch_1852010_2089514119_1045768>: Cannot allocate memory (12)
+when serializing tuple item 0
+when serializing torch.storage.TypedStorage reconstructor arguments
+when serializing torch.storage.TypedStorage object
+when serializing tuple item 1
+when serializing torch.Tensor reconstructor arguments
+when serializing torch.Tensor object
+when serializing tuple item 1
+when serializing list item 1
+when serializing dict item 150447
+when serializing dict item 'lookup'
+when serializing dataset.BindingDBDataset state
+when serializing dataset.BindingDBDataset object
+when serializing tuple item 0
+when serializing method reconstructor arguments
+when serializing method object
+when serializing tuple item 0
+when serializing dict item 'args'
+when serializing webdataset.filters.FilterFunction state
+when serializing webdataset.filters.FilterFunction object
+when serializing list item 5
+when serializing dict item 'pipeline'
+when serializing webdataset.pipeline.DataPipeline state
+when serializing webdataset.pipeline.DataPipeline object
+when serializing tuple item 1
+when serializing dict item '_args'
+when serializing multiprocessing.context.Process state
+when serializing multiprocessing.context.Process object
