@@ -8,10 +8,8 @@ WARNING:google.auth._default:No project ID could be determined. Consider running
 INFO:dataset:Split applied: 2875280 samples.
 INFO:dataset:Split applied: 718821 samples.
 INFO:dataset:Caching proteins for 10298 unique targets...
-/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py:1118: UserWarning: 'pin_memory' argument is set as true but no accelerator is found, then device pinned memory won't be used.
-  super().__init__(loader)
 RUNNING TRAIN FILE VERSION UPDATED
-Using device: cpu
+Using device: cuda
 Traceback (most recent call last):
   File "/home/users/medha156/plop/train.py", line 250, in <module>
     train(args)
@@ -19,9 +17,9 @@ Traceback (most recent call last):
   File "/home/users/medha156/plop/train.py", line 115, in train
     for batch_idx, (ligand_batch, proteins, protein_mask, labels) in enumerate(train_loader):
                                                                      ~~~~~~~~~^^^^^^^^^^^^^^
-  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 495, in __iter__
-    self._iterator = self._get_iterator()
-                     ~~~~~~~~~~~~~~~~~~^^
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 500, in __iter__
+    return self._get_iterator()
+           ~~~~~~~~~~~~~~~~~~^^
   File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 433, in _get_iterator
     return _MultiProcessingDataLoaderIter(self)
   File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 1192, in __init__
@@ -54,7 +52,7 @@ Traceback (most recent call last):
   File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/storage.py", line 528, in _share_filename_cpu_
     return super()._share_filename_cpu_(*args, **kwargs)
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-RuntimeError: unable to mmap 76 bytes from file </torch_946315_3738396062_1045853>: Cannot allocate memory (12)
+RuntimeError: unable to mmap 76 bytes from file </torch_1882029_2396155728_1045767>: Cannot allocate memory (12)
 when serializing tuple item 0
 when serializing torch.storage.TypedStorage reconstructor arguments
 when serializing torch.storage.TypedStorage object
@@ -63,7 +61,7 @@ when serializing torch.Tensor reconstructor arguments
 when serializing torch.Tensor object
 when serializing tuple item 1
 when serializing list item 0
-when serializing dict item 50257061
+when serializing dict item 150447
 when serializing dict item 'lookup'
 when serializing dataset.BindingDBDataset state
 when serializing dataset.BindingDBDataset object

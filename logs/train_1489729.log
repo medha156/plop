@@ -1,0 +1,27 @@
+Starting job
+
+[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+WARNING:google.auth._default:No project ID could be determined. Consider running `gcloud config set project` or setting the GOOGLE_CLOUD_PROJECT environment variable
+/home/users/medha156/plop/grah/lib/python3.14/site-packages/google/cloud/bigquery/table.py:1994: UserWarning: BigQuery Storage module not found, fetch data with the REST endpoint instead.
+  warnings.warn(
+INFO:dataset:Split applied: 2875280 samples.
+INFO:dataset:Split applied: 718821 samples.
+INFO:dataset:Caching proteins for 10298 unique targets...
+RUNNING TRAIN FILE VERSION UPDATED
+Using device: cuda
+Traceback (most recent call last):
+  File "/home/users/medha156/plop/train.py", line 250, in <module>
+    train(args)
+    ~~~~~^^^^^^
+  File "/home/users/medha156/plop/train.py", line 69, in train
+    train_loader = DataLoader(
+        train_dataset.dataset,          # .dataset is the wds pipeline
+    ...<5 lines>...
+        prefetch_factor=4
+    )
+  File "/home/users/medha156/plop/grah/lib/python3.14/site-packages/torch/utils/data/dataloader.py", line 281, in __init__
+    raise ValueError(
+    ...<2 lines>...
+    )
+ValueError: prefetch_factor option could only be specified in multiprocessing.let num_workers > 0 to enable multiprocessing, otherwise set prefetch_factor to None.

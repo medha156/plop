@@ -23,7 +23,7 @@ import re
 from dataset import *
 from model import *
 import torch.multiprocessing as mp
-mp.set_sharing_strategy('file_system')
+mp.set_start_method("fork", force=True)
 
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
@@ -70,19 +70,19 @@ def train(args):
         train_dataset.dataset,          # .dataset is the wds pipeline
         batch_size=args.batch_size,
         collate_fn=binding_collate,
-        num_workers=1,                  # wds supports multi-worker streaming
+        num_workers=16,                  # wds supports multi-worker streaming
         pin_memory=True,
-        persistent_workers=True,
-        prefetch_factor=4
+        persistent_workers=False,
+        prefetch_factor=None
     )
     test_loader = DataLoader(
         test_dataset.dataset,
         batch_size=args.batch_size,
         collate_fn=binding_collate,
-        num_workers=1,
+        num_workers=16,
         pin_memory=True,
-        persistent_workers=True,
-        prefetch_factor=4
+        persistent_workers=False,
+        prefetch_factor=None
     )
 
     model = BasicModel(
