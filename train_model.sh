@@ -6,13 +6,17 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
+#SBATCH --output=./logs/train_%j.log
+#SBATCH --time=24:00:00
+
+echo "Starting job"
 
 ulimit -n 65535
-source ~/plop_env/bin/activate
-export GOOGLE_APPLICATION_CREDENTIALS="/home/users/saarlip/plop/key.json"
+source ~/plop/grah/bin/activate
+export GOOGLE_APPLICATION_CREDENTIALS="/home/users/medha156/.config/gcloud/application_default_credentials.json"
 python train.py \
     --project_id plop-486317 \
     --dataset_id binding_data \
-    --protein_dir "/home/users/saarlip/proteins_smol/proteins-{000000..000011}.tar" \
-    --ligand_dir "/home/users/shardmmen/ligands-{000000..000032}.tar" \
+    --protein_dir "/home/users/medha156/proteins_smol/proteins-{000000..000011}.tar" \
+    --ligand_dir "/home/users/medha156/shardmmen/ligands-{000000..000032}.tar" \
     --model_dir ~/plop_model
