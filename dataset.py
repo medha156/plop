@@ -6,6 +6,7 @@ from torch_geometric.data import Data, Batch
 import logging
 import numpy as np
 from google.cloud import bigquery
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -32,17 +33,19 @@ class BindingDBDataset:
             split_indices: A list or array of integers representing the rows 
                            from the BigQuery table to include in this split.
         """
-        self.client = bigquery.Client(project=project_id)
+        #self.client = bigquery.Client(project=project_id)
         
         # 1. Fetch Full Metadata
-        query = f"""
-            SELECT CAST(monomerid AS STRING) as mid, 
-                   CAST(polymerid AS STRING) as pid, 
-                   ki_value, kd_value, ic50_value
-            FROM `{project_id}.{dataset_id}.binding_cleaned_clustered`
-            WHERE polymerid IS NOT NULL
-        """
-        full_df = self.client.query(query).to_dataframe().fillna(-1).sort_values(['mid', 'pid']).reset_index(drop=True) # Sorted to get consistent indexing
+        #query = f"""
+        #    SELECT CAST(monomerid AS STRING) as mid, 
+        #           CAST(polymerid AS STRING) as pid, 
+        #           ki_value, kd_value, ic50_value
+        #    FROM `{project_id}.{dataset_id}.binding_cleaned_clustered`
+        #    WHERE polymerid IS NOT NULL
+        #"""
+        #full_df = self.client.query(query).to_dataframe().fillna(-1).sort_values(['mid', 'pid']).reset_index(drop=True) # Sorted to get consistent indexing
+
+        full_df = pd.read_csv("pairs.csv")
 
         # 2. Apply the Split Indices
         if split_indices is not None:
@@ -90,10 +93,13 @@ class BindingDBDataset:
             wds.split_by_worker,
             wds.tarfile_to_samples(),
             wds.decode(),
-            wds.select(lambda sample: sample["__key__"] in self.active_mids),
+            wds.select(self.sample_filter),
             self._expand_pairs,
             wds.shuffle(20000)
         )
+
+    def sample_filter(self, sample):
+        return sample["__key__"] in self.active_mids
 
     def __len__(self):
         return len(self.df)
