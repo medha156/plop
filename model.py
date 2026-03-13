@@ -66,6 +66,8 @@ class BasicModel(nn.Module):
                  pooling):
         super().__init__()
 
+        self.dropout_rate = dropout_rate
+
         # Initial linear layer to move the graph into the expected dimensions
         self.node_init = torch.nn.Linear(ligand_node_in, ligand_node_embed)
         self.edge_init = torch.nn.Linear(ligand_edge_in, ligand_edge_embed)
@@ -107,8 +109,7 @@ class BasicModel(nn.Module):
         """
         x = x.masked_fill(~mask.unsqueeze(-1), float("-inf"))
         x = torch.max(x, dim=dim).values
-        x = torch.nan_to_num(x, neginf=0.0)
-        return x
+        return torch.nan_to_num(x, neginf=0.0)
 
     def masked_mean_pool(self, x, mask, dim):
         """
@@ -116,7 +117,7 @@ class BasicModel(nn.Module):
         mask: (B, N) boolean
         """
         mask = mask.unsqueeze(-1)           # (B, N, 1)
-        x *= mask                           # zero out masked elements
+        x = x * mask                        # zero out masked elements
 
         sum_x = x.sum(dim=dim)              # sum of valid elements
         count = mask.sum(dim=dim).clamp(min=1)  # number of valid elements
@@ -146,7 +147,7 @@ class BasicModel(nn.Module):
         self.debug_check(ligand, "Post-Node-Init")
 
         if self.training:
-            edge_index, edge_mask = dropout_edge(edge_index, p=self.gnn[0].dropout_rate)
+            edge_index, edge_mask = dropout_edge(edge_index, p=self.dropout_rate)
             edge_attr = edge_attr[edge_mask]
 
         for i, layer in enumerate(self.gnn):

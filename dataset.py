@@ -5,8 +5,8 @@ import webdataset as wds
 from torch_geometric.data import Data, Batch
 import logging
 import numpy as np
-from google.cloud import bigquery
 import pandas as pd
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -33,19 +33,21 @@ class BindingDBDataset:
             split_indices: A list or array of integers representing the rows 
                            from the BigQuery table to include in this split.
         """
-        #self.client = bigquery.Client(project=project_id)
         
         # 1. Fetch Full Metadata
-        #query = f"""
-        #    SELECT CAST(monomerid AS STRING) as mid, 
-        #           CAST(polymerid AS STRING) as pid, 
-        #           ki_value, kd_value, ic50_value
-        #    FROM `{project_id}.{dataset_id}.binding_cleaned_clustered`
-        #    WHERE polymerid IS NOT NULL
-        #"""
-        #full_df = self.client.query(query).to_dataframe().fillna(-1).sort_values(['mid', 'pid']).reset_index(drop=True) # Sorted to get consistent indexing
-
-        full_df = pd.read_csv("pairs.csv")
+        if os.path.exists("pairs.csv"):
+            full_df = pd.read_csv("pairs.csv")
+        else:
+            from google.cloud import bigquery
+            self.client = bigquery.Client(project=project_id)
+            query = f"""
+               SELECT CAST(monomerid AS STRING) as mid, 
+                      CAST(polymerid AS STRING) as pid, 
+                      ki_value, kd_value, ic50_value
+               FROM `{project_id}.{dataset_id}.binding_cleaned_clustered`
+               WHERE polymerid IS NOT NULL
+            """
+            full_df = self.client.query(query).to_dataframe().fillna(-1).sort_values(['mid', 'pid']).reset_index(drop=True) # Sorted to get consistent indexing
 
         # 2. Apply the Split Indices
         if split_indices is not None:

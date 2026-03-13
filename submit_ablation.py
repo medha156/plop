@@ -14,7 +14,7 @@ aiplatform.init(
 
 worker_pool_specs_default = [{
     "machine_spec": {
-        "machine_type": "g2-standard-16",
+        "machine_type": "g2-standard-32",
         "accelerator_type": "NVIDIA_L4",
         "accelerator_count": 1,
     },
@@ -31,13 +31,13 @@ worker_pool_specs_default = [{
 }]
 
 specs = {
-    'mlp': copy.deepcopy(worker_pool_specs_default),
-    'attn': copy.deepcopy(worker_pool_specs_default),
-    'gnn': copy.deepcopy(worker_pool_specs_default),
+    # 'mlp': copy.deepcopy(worker_pool_specs_default),
+    'atn': copy.deepcopy(worker_pool_specs_default),
+    # 'gnn': copy.deepcopy(worker_pool_specs_default),
 }
-specs['mlp'][0]["container_spec"]["args"] += ["--mlp_layers", "1"]
-specs['attn'][0]["container_spec"]["args"] += ["--attn_layers", "0"]
-specs['gnn'][0]["container_spec"]["args"] += ["--gnn_layers", "0"]
+# specs['mlp'][0]["container_spec"]["args"] += ["--mlp_layers", "0", "--model_dir", "/gcs/protein-ligand-outcome-prediction/ablate_mlp"]
+specs['atn'][0]["container_spec"]["args"] += ["--atn_layers", "0", "--model_dir", "/gcs/protein-ligand-outcome-prediction/ablate_atn"]
+# specs['gnn'][0]["container_spec"]["args"] += ["--gnn_layers", "0", "--model_dir", "/gcs/protein-ligand-outcome-prediction/ablate_gnn"]
 
 for layer, spec in specs.items():
     job = aiplatform.CustomJob(

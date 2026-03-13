@@ -13,18 +13,15 @@ from torch.optim import Adam
 from torch.nn import MSELoss
 from torch.utils.data import DataLoader, Subset, Dataset
 from sklearn.model_selection import train_test_split
-from google.cloud import bigquery
 from torch_geometric.data import Batch
 import hypertune
 import logging
 import re
-import pandas
 
 # Local modules
 from dataset import *
 from model import *
 
-import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
 
 logging.basicConfig(level=logging.INFO)
@@ -35,15 +32,18 @@ def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
-    df = pd.read_csv("pairs.csv")
-    total = len(df)
-    #client = bigquery.Client(project=args.project_id)
-    #query = f"""
-    #SELECT COUNT(*) as n
-    #FROM `{args.project_id}.{args.dataset_id}.binding_cleaned_clustered`
-    #WHERE polymerid IS NOT NULL
-    #"""
-    #total = client.query(query).to_dataframe().iloc[0]['n']
+    if os.path.exists("pairs.csv"):
+        df = pd.read_csv("pairs.csv")
+        total = len(df)
+    else:
+        from google.cloud import bigquery
+        client = bigquery.Client(project=args.project_id)
+        query = f"""
+        SELECT COUNT(*) as n
+        FROM `{args.project_id}.{args.dataset_id}.binding_cleaned_clustered`
+        WHERE polymerid IS NOT NULL
+        """
+        total = client.query(query).to_dataframe().iloc[0]['n']
 
     indices = list(range(total))
     random.seed(42)
@@ -71,18 +71,18 @@ def train(args):
         train_dataset.dataset,          # .dataset is the wds pipeline
         batch_size=args.batch_size,
         collate_fn=binding_collate,
-        num_workers=16,                  # wds supports multi-worker streaming
+        num_workers=32,                  # wds supports multi-worker streaming
         pin_memory=True,
-        persistent_workers=False,
+        persistent_workers=True,
         prefetch_factor=4
     )
     test_loader = DataLoader(
         test_dataset.dataset,
         batch_size=args.batch_size,
         collate_fn=binding_collate,
-        num_workers=16,
+        num_workers=32,
         pin_memory=True,
-        persistent_workers=False,
+        persistent_workers=True,
         prefetch_factor=4
     )
 
@@ -102,12 +102,32 @@ def train(args):
         pooling=args.pool
     ).to(device)
 
+    max_epoch = -1
+    if os.path.exists(args.model_dir):
+        checkpoints = os.listdir(args.model_dir)
+        # Checkpoints of form model_e{epoch}.pt
+        # Get the one with the highest epoch number
+        pattern = re.compile(r'model_e(\d+)\.pt')
+        for ckpt in checkpoints:
+            match = pattern.match(ckpt)
+            if match:
+                epoch_num = int(match.group(1))
+                if epoch_num > max_epoch:
+                    max_epoch = epoch_num
+    if max_epoch >= 0:
+        latest_ckpt = os.path.join(args.model_dir, f"model_e{max_epoch}.pt")
+        logger.info(f"Resuming from checkpoint: {latest_ckpt}")
+        model_state = torch.load(latest_ckpt, map_location=device)
+        model.load_state_dict(model_state)
+
+    os.makedirs(args.model_dir, exist_ok=True)
+
     optimizer = Adam(model.parameters(), lr=args.lr)
     criterion = MSELoss(reduction='none') # Important for manual masking
 
-    log_interval = 50
+    log_interval = 100
 
-    for epoch in range(args.epochs):
+    for epoch in range(max_epoch + 1, args.epochs):
         start_time = time.time()  # Start the clock
         # TRAIN
         model.train()
@@ -183,9 +203,11 @@ def train(args):
 
                     raw_loss = criterion(preds, labels)
 
-                    masked_loss_per_element = raw_loss * mask * valid_mask.float().unsqueeze(1)
+                    full_mask = mask * valid_mask.float().unsqueeze(1)
+
+                    masked_loss_per_element = raw_loss * full_mask
                     column_sums = masked_loss_per_element.sum(dim=0)
-                    column_counts = mask.sum(dim=0).clamp(min=1) # Avoid division by zero
+                    column_counts = full_mask.sum(dim=0).clamp(min=1) # Avoid division by zero
 
                 if not valid_mask.all().item():
                     logger.warning(f"Validation batch {batch_idx} contains {(~valid_mask).sum().item()} invalid samples after attention pooling. This may indicate an issue with the data or model architecture.")
@@ -224,7 +246,6 @@ TEST | Total: {test_loss_total:.4f} | Ki: {test_loss_column[0]:.4f} | Kd: {test_
         # )
 
         # Save to GCS-mounted directory
-        os.makedirs(args.model_dir, exist_ok=True)
         torch.save(model.state_dict(), os.path.join(args.model_dir, f"model_e{epoch}.pt"))
 
 if __name__ == "__main__":
