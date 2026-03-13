@@ -256,7 +256,7 @@ if __name__ == "__main__":
     parser.add_argument("--protein_dir", type=str, required=True)
     parser.add_argument("--ligand_dir", type=str, required=True)
     parser.add_argument("--batch_size", type=int, default=32) # Tuned by HPO
-    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--epochs", type=int, default=8)
     parser.add_argument("--lr", type=float, default=7e-4) # Tuned by HPO
     parser.add_argument("--model_dir", type=str, default=os.environ.get("AIP_MODEL_DIR", "./model"))
     parser.add_argument("--node_embed", type=int, default=64) # Tuned by HPO
